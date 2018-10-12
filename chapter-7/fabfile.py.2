@@ -1,0 +1,27 @@
+from fabric.api import run, roles, sudo, env
+from fabric_ec2 import EC2TagManager
+
+def configure_roles(environment, region):
+    """ Set up the Fabric env.roledefs, using the correct roles for the given environment
+    """
+    tags = EC2TagManager(common_tags={'environment': environment},        regions=[region])
+
+    roles = {}
+    for role in ['web', 'db']:
+        roles[role] = tags.get_instances(role=role)
+
+    return roles
+
+# select staging or production environment to filter roles accordingly,
+env.roledefs = configure_roles(env.environment, env.region)
+
+@roles('web')
+def restart_web():
+        sudo('/etc/init.d/nginx restart')
+
+@roles('db')
+def restart_db():
+        sudo('/etc/init.d/postgresql restart')
+        
+def hostname():
+        run('hostname')

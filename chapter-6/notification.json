@@ -1,0 +1,28 @@
+"ScalingSNSTopic" : {
+ "Type" : "AWS::SNS::Topic",
+ "Properties" : {
+ "Subscription" : [ {
+ "Endpoint" : "notifications@example.com",
+ "Protocol" : "email"
+ } ]
+ }
+}
+"CeleryGroup" : {
+ "Type" : "AWS::AutoScaling::AutoScalingGroup",
+ "Properties" : {
+ "AvailabilityZones" : { "Fn::GetAZs" : ""},
+ "LaunchConfigurationName" : { "Ref" : "CeleryLaunchConfig" },
+ "MinSize" : "1",
+ "MaxSize" : "2",
+ "DesiredCapacity" : "1",
+ "NotificationConfiguration" : {
+ "TopicARN" : { "Ref" : "ScalingSNSTopic" },
+ "NotificationTypes" : [
+ "autoscaling:EC2_INSTANCE_LAUNCH",
+ "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+ "autoscaling:EC2_INSTANCE_TERMINATE",
+ "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+ ]
+ }
+ }
+},

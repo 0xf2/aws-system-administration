@@ -1,0 +1,13 @@
+{
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"A simple stack that launches an instance.",
+   "Resources":{
+      "Ec2Instance":{
+         "Type":"AWS::EC2::Instance",
+         "Properties":{
+            "InstanceType":"t2.micro",
+            "ImageId":"ami-43a15f3e"
+         }
+      }
+   }
+}

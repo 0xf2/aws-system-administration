@@ -1,0 +1,16 @@
+from fabric.api import env
+
+def production():
+    env.roledefs = {
+        'web': ['www1-prod', 'www2-prod', 'www3-prod'],
+        'db': ['db1-prod', 'db2-prod']
+    }
+
+def staging():
+    env.roledefs = {
+        'web': ['www1-staging', 'www2-staging'],
+        'db': ['db1-staging']
+    }
+
+def deploy():
+    run('deploy.py')

@@ -1,0 +1,209 @@
+{
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"Example Puppet masterless stack",
+   "Parameters":{
+      "KeyName":{
+         "Description":"EC2 KeyPair name",
+         "Type":"String",
+         "MinLength":"1",
+         "MaxLength":"255",
+         "AllowedPattern":"[\\x20-\\x7E]*",
+         "ConstraintDescription":"can contain only ASCII characters."
+      },
+      "AMI":{
+         "Description":"AMI ID",
+         "Type":"String"
+      }
+   },
+   "Resources":{
+      "CFNKeys":{
+         "Type":"AWS::IAM::AccessKey",
+         "Properties":{
+            "UserName":{
+               "Ref":"CFNInitUser"
+            }
+         }
+      },
+      "CFNInitUser":{
+         "Type":"AWS::IAM::User",
+         "Properties":{
+            "Policies":[
+               {
+                  "PolicyName":"AccessForCFNInit",
+                  "PolicyDocument":{
+                     "Statement":[
+                        {
+                           "Action":"cloudformation:DescribeStackResource",
+                           "Resource":"*",
+                           "Effect":"Allow"
+                        }
+                     ]
+                  }
+               }
+            ]
+         }
+      },
+      "NginxInstance":{
+         "Type":"AWS::EC2::Instance",
+         "Metadata":{
+            "AWS::CloudFormation::Init":{
+               "config":{
+                  "packages":{
+                     "yum":{
+                        "puppet":[
+
+                        ],
+                        "ruby-devel":[
+
+                        ],
+                        "gcc":[
+
+                        ],
+                        "make":[
+
+                        ],
+                        "rubygems":[
+
+                        ]
+                     },
+                     "rubygems":{
+                        "json":[
+
+                        ]
+                     }
+                  },
+                  "files":{
+                     "/etc/yum.repos.d/epel.repo":{
+                        "source":"https://s3.amazonaws.com/cloudformationexamples/enable-epel-on-amazon-linux-ami",
+                        "mode":"000644",
+                        "owner":"root",
+                        "group":"root"
+                     },
+                     "/etc/puppet/autosign.conf":{
+                        "content":"*.internal\n",
+                        "mode":"100644",
+                        "owner":"root",
+                        "group":"wheel"
+                     },
+                     "/etc/puppet/puppet.conf":{
+                        "content":{
+                           "Fn::Join":[
+                              "",
+                              [
+                                 "[main]\n",
+                                 " logdir=/var/log/puppet\n",
+                                 " rundir=/var/run/puppet\n",
+                                 " ssldir=$vardir/ssl\n",
+                                 " pluginsync=true\n",
+                                 "[agent]\n",
+                                 " classfile=$vardir/classes.txt\n",
+                                 " localconfig=$vardir/localconfig\n"
+                              ]
+                           ]
+                        },
+                        "mode":"000644",
+                        "owner":"root",
+                        "group":"root"
+                     },
+                     "/etc/puppet/manifests/site.pp":{
+                        "content":{
+                           "Fn::Join":[
+                              "",
+                              [
+                                 "node basenode {\n",
+                                 " package { 'nginx':\n",
+                                 " ensure => present\n",
+                                 " }\n\n",
+                                 " service { 'nginx':\n",
+                                 " ensure => running,\n",
+                                 " require=> Package['nginx']\n",
+                                 " }\n",
+                                 "}\n",
+                                 "node /^.*internal$/ inherits basenode {\n",
+                                 "}\n"
+                              ]
+                           ]
+                        }
+                     },
+                     "mode":"100644",
+                     "owner":"root",
+                     "group":"wheel"
+                  }
+               }
+            }
+         },
+         "Properties":{
+            "InstanceType":"t2.micro",
+            "SecurityGroups":[
+               {
+                  "Ref":"NginxGroup"
+               }
+            ],
+            "KeyName":{
+               "Ref":"KeyName"
+            },
+            "ImageId":{
+               "Ref":"AMI"
+            },
+            "UserData":{
+               "Fn::Base64":{
+                  "Fn::Join":[
+                     "",
+                     [
+                        "#!/bin/bash\n",
+                        "/opt/aws/bin/cfn-init --region ",
+                        {
+                           "Ref":"AWS::Region"
+                        },
+                        " -s ",
+                        {
+                           "Ref":"AWS::StackName"
+                        },
+                        " -r NginxInstance ",
+                        " --access-key ",
+                        {
+                           "Ref":"CFNKeys"
+                        },
+                        " --secret-key ",
+                        {
+                           "Fn::GetAtt":[
+                              "CFNKeys",
+                              "SecretAccessKey"
+                           ]
+                        },
+                        "\n",
+                        "/usr/bin/puppet apply /etc/puppet/manifests/site.pp",
+                        "\n"
+                     ]
+                  ]
+               }
+            }
+         }
+      },
+      "NginxGroup":{
+         "Type":"AWS::EC2::SecurityGroup",
+         "Properties":{
+            "SecurityGroupIngress":[
+               {
+                  "ToPort":"22",
+                  "IpProtocol":"tcp",
+                  "CidrIp":"0.0.0.0/0",
+                  "FromPort":"22"
+               }
+            ],
+            "GroupDescription":"Security Group for managed Nginx"
+         }
+      }
+   },
+   "Outputs":{
+      "NginxDNSName":{
+         "Value":{
+            "Fn::GetAtt":[
+               "NginxInstance",
+               "PublicDnsName"
+            ]
+         },
+         "Description":"DNS Name of Nginx managed instance"
+      }
+   }
+}

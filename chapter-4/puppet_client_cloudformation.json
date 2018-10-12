@@ -1,0 +1,187 @@
+{
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"Example Puppet client stack",
+   "Parameters":{
+      "KeyName":{
+         "Description":"EC2 KeyPair name",
+         "Type":"String",
+         "MinLength":"1",
+         "MaxLength":"255",
+         "AllowedPattern":"[\\x20-\\x7E]*",
+         "ConstraintDescription":"can contain only ASCII characters."
+      },
+      "AMI":{
+         "Description":"AMI ID",
+         "Type":"String"
+      },
+      "PuppetMasterDNS":{
+         "Description":"Private DNS name of the Puppet master instance",
+         "Type":"String"
+      },
+      "PuppetClientSecurityGroup":{
+         "Description":"Name of the Puppet client Security Group",
+         "Type":"String"
+      }
+   },
+   "Resources":{
+      "CFNKeys":{
+         "Type":"AWS::IAM::AccessKey",
+         "Properties":{
+            "UserName":{
+               "Ref":"CFNInitUser"
+            }
+         }
+      },
+      "CFNInitUser":{
+         "Type":"AWS::IAM::User",
+         "Properties":{
+            "Policies":[
+               {
+                  "PolicyName":"AccessForCFNInit",
+                  "PolicyDocument":{
+                     "Statement":[
+                        {
+                           "Action":"cloudformation:DescribeStackResource",
+                           "Resource":"*",
+                           "Effect":"Allow"
+                        }
+                     ]
+                  }
+               }
+            ]
+         }
+      },
+      "PuppetClientInstance":{
+         "Type":"AWS::EC2::Instance",
+         "Properties":{
+            "UserData":{
+               "Fn::Base64":{
+                  "Fn::Join":[
+                     "",
+                     [
+                        "#!/bin/bash\n",
+                        "/opt/aws/bin/cfn-init --region ",
+                        {
+                           "Ref":"AWS::Region"
+                        },
+                        " -s ",
+                        {
+                           "Ref":"AWS::StackName"
+                        },
+                        " -r PuppetClientInstance ",
+                        " --access-key ",
+                        {
+                           "Ref":"CFNKeys"
+                        },
+                        " --secret-key ",
+                        {
+                           "Fn::GetAtt":[
+                              "CFNKeys",
+                              "SecretAccessKey"
+                           ]
+                        }
+                     ]
+                  ]
+               }
+            },
+            "KeyName":{
+               "Ref":"KeyName"
+            },
+            "SecurityGroups":[
+               {
+                  "Ref":"PuppetClientSecurityGroup"
+               }
+            ],
+            "InstanceType":"t2.micro",
+            "ImageId":{
+               "Ref":"AMI"
+            }
+         },
+         "Metadata":{
+            "AWS::CloudFormation::Init":{
+               "config":{
+                  "files":{
+                     "/etc/puppet/puppet.conf":{
+                        "content":{
+                           "Fn::Join":[
+                              "",
+                              [
+                                 "[main]\n",
+                                 " server=",
+                                 {
+                                    "Ref":"PuppetMasterDNS"
+                                 },
+                                 "\n",
+                                 " logdir=/var/log/puppet\n",
+                                 " rundir=/var/run/puppet\n",
+                                 " ssldir=$vardir/ssl\n",
+                                 " pluginsync=true\n",
+                                 "[agent]\n",
+                                 " classfile=$vardir/classes.txt\n",
+                                 " localconfig=$vardir/localconfig\n"
+                              ]
+                           ]
+                        },
+                        "owner":"root",
+                        "group":"root",
+                        "mode":"000644"
+                     }
+                  },
+                  "packages":{
+                     "rubygems":{
+                        "json":[
+
+                        ]
+                     },
+                     "yum":{
+                        "gcc":[
+
+                        ],
+                        "rubygems":[
+
+                        ],
+                        "ruby-devel":[
+
+                        ],
+                        "make":[
+
+                        ],
+                        "puppet":[
+
+                        ]
+                     }
+                  },
+                  "services":{
+                     "sysvinit":{
+                        "puppet":{
+                           "ensureRunning":"true",
+                           "enabled":"true"
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   },
+   "Outputs":{
+      "PuppetClientIP":{
+         "Description":"Public IP of the Puppet client instance",
+         "Value":{
+            "Fn::GetAtt":[
+               "PuppetClientInstance",
+               "PublicIp"
+            ]
+         }
+      },
+      "PuppetClientPrivateDNS":{
+         "Description":"Private DNS of the Puppet client instance",
+         "Value":{
+            "Fn::GetAtt":[
+               "PuppetMasterInstance",
+               "PrivateDnsName"
+            ]
+         }
+      }
+   }
+}

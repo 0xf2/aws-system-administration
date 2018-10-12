@@ -1,0 +1,12 @@
+ALLOWED_HOSTS = "*"
+DEBUG = True
+DATABASES = {
+ "default": {
+ "ENGINE": "django.db.backends.mysql",
+ "NAME": "myblog",
+ "USER": "awsuser",
+ "PASSWORD": "foobarbaz",
+ "HOST": "myblog.cvqj2dqsvoab.us-east-1.rds.amazonaws.com",
+ "PORT": "3306"
+ }
+}

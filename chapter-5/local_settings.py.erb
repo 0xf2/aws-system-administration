@@ -1,0 +1,14 @@
+ALLOWED_HOSTS = "*"
+
+DEBUG = True
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "mydb",
+        "USER": "<%= @db_user %>",
+        "PASSWORD": "<%= @db_password %>",
+        "HOST": "<%= @db_endpoint %>",
+        "PORT": "3306"
+    }
+}

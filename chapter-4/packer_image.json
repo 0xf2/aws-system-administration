@@ -1,0 +1,32 @@
+{
+   "variables":{
+      "aws_access_key":"",
+      "aws_secret_key":""
+   },
+   "provisioners":[
+      {
+         "type":"shell",
+         "script":"install_puppet.sh"
+      },
+      {
+         "type":"puppet-masterless",
+         "manifest_file":"puppet/manifests/site.pp",
+         "module_paths":[
+            "puppet/modules"
+         ]
+      }
+   ],
+   "builders":[
+      {
+         "type":"amazon-ebs",
+         "access_key":"",
+         "secret_key":"",
+         "region":"us-east-1",
+         "source_ami":"ami-c80b0aa2",
+         "instance_type":"t2.small",
+         "ssh_username":"ubuntu",
+         "ami_name":"my-packer-example-",
+         "associate_public_ip_address":true
+      }
+   ]
+}

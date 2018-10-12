@@ -1,0 +1,113 @@
+{
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"OpenVPN EC2 Instance and Security Group",
+   "Parameters":{
+      "KeyName":{
+         "Description":"EC2 KeyPair name",
+         "Type":"String",
+         "MinLength":"1",
+         "MaxLength":"255",
+         "AllowedPattern":"[\\x20-\\x7E]*",
+         "ConstraintDescription":"can contain only ASCII characters."
+      },
+      "AllowedIPRange":{
+         "Description":"IP Range allowed to access OpenVPN via SSH and HTTP(S)",
+         "Type":"String",
+         "MinLength":"9",
+         "MaxLength":"18",
+         "Default":"0.0.0.0/0",
+         "AllowedPattern":"(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+         "ConstraintDescription":"Must be a valid IP CIDR range of the form x.x.x.x/x."
+      },
+      "AMI":{
+         "Description":"OpenVPN AMI ID",
+         "Type":"String"
+      }
+   },
+   "Resources":{
+      "OpenVPNInstance":{
+         "Type":"AWS::EC2::Instance",
+         "Properties":{
+            "InstanceType":"t2.micro",
+            "SecurityGroups":[
+               {
+                  "Ref":"OpenVPNSecurityGroup"
+               }
+            ],
+            "KeyName":{
+               "Ref":"KeyName"
+            },
+            "ImageId":{
+               "Ref":"AMI"
+            },
+            "SourceDestCheck":"false"
+         }
+      },
+      "OpenVPNSecurityGroup":{
+         "Type":"AWS::EC2::SecurityGroup",
+         "Properties":{
+            "GroupDescription":"Allow SSH, HTTPS and OpenVPN access",
+            "SecurityGroupIngress":[
+               {
+                  "IpProtocol":"tcp",
+                  "FromPort":"22",
+                  "ToPort":"22",
+                  "CidrIp":{
+                     "Ref":"AllowedIPRange"
+                  }
+               },
+               {
+                  "IpProtocol":"tcp",
+                  "FromPort":"443",
+                  "ToPort":"443",
+                  "CidrIp":{
+                     "Ref":"AllowedIPRange"
+                  }
+               },
+               {
+                  "IpProtocol":"tcp",
+                  "FromPort":"943",
+                  "ToPort":"943",
+                  "CidrIp":{
+                     "Ref":"AllowedIPRange"
+                  }
+               },
+               {
+                  "IpProtocol":"udp",
+                  "FromPort":"1194",
+                  "ToPort":"1194",
+                  "CidrIp":{
+                     "Ref":"AllowedIPRange"
+                  }
+               }
+            ]
+         }
+      }
+   },
+   "Outputs":{
+      "InstanceId":{
+         "Description":"InstanceId of the OpenVPN EC2 instance",
+         "Value":{
+            "Ref":"OpenVPNInstance"
+         }
+      },
+      "OpenVPNSecurityGroup":{
+         "Description":"ID of the OpenVPN Security Group",
+         "Value":{
+            "Fn::GetAtt":[
+               "OpenVPNSecurityGroup",
+               "GroupId"
+            ]
+         }
+      },
+      "PublicIP":{
+         "Description":"Public IP address of the newly created EC2 instance",
+         "Value":{
+            "Fn::GetAtt":[
+               "OpenVPNInstance",
+               "PublicIp"
+            ]
+         }
+      }
+   }
+}

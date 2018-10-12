@@ -1,0 +1,136 @@
+{
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"Example Puppet master and client stack (manual install)",
+   "Parameters":{
+      "KeyName":{
+         "Description":"EC2 KeyPair name",
+         "Type":"String",
+         "MinLength":"1",
+         "MaxLength":"255",
+         "AllowedPattern":"[\\x20-\\x7E]*",
+         "ConstraintDescription":"can contain only ASCII characters."
+      },
+      "AMI":{
+         "Description":"AMI ID",
+         "Type":"String"
+      }
+   },
+   "Resources":{
+      "PuppetClientGroup":{
+         "Type":"AWS::EC2::SecurityGroup",
+         "Properties":{
+            "SecurityGroupIngress":[
+               {
+                  "ToPort":"22",
+                  "IpProtocol":"tcp",
+                  "CidrIp":"0.0.0.0/0",
+                  "FromPort":"22"
+               }
+            ],
+            "GroupDescription":"Group for Puppet clients"
+         }
+      },
+      "PuppetMasterGroup":{
+         "Type":"AWS::EC2::SecurityGroup",
+         "Properties":{
+            "SecurityGroupIngress":[
+               {
+                  "ToPort":"8140",
+                  "IpProtocol":"tcp",
+                  "SourceSecurityGroupName":{
+                     "Ref":"PuppetClientGroup"
+                  },
+                  "FromPort":"8140"
+               },
+               {
+                  "ToPort":"22",
+                  "IpProtocol":"tcp",
+                  "CidrIp":"0.0.0.0/0",
+                  "FromPort":"22"
+               }
+            ],
+            "GroupDescription":"Group for Puppet master"
+         }
+      },
+      "PuppetMasterInstance":{
+         "Type":"AWS::EC2::Instance",
+         "Properties":{
+            "ImageId":{
+               "Ref":"AMI"
+            },
+            "KeyName":{
+               "Ref":"KeyName"
+            },
+            "SecurityGroups":[
+               {
+                  "Ref":"PuppetMasterGroup"
+               }
+            ],
+            "InstanceType":"t2.micro"
+         }
+      },
+      "PuppetClientInstance":{
+         "Type":"AWS::EC2::Instance",
+         "Properties":{
+            "ImageId":{
+               "Ref":"AMI"
+            },
+            "KeyName":{
+               "Ref":"KeyName"
+            },
+            "SecurityGroups":[
+               {
+                  "Ref":"PuppetClientGroup"
+               }
+            ],
+            "InstanceType":"t2.micro",
+            "UserData":{
+               "Fn::Base64":{
+                  "Fn::GetAtt":[
+                     "PuppetMasterInstance",
+                     "PrivateDnsName"
+                  ]
+               }
+            }
+         }
+      }
+   },
+   "Outputs":{
+      "PuppetMasterIP":{
+         "Description":"Public IP of the Puppet master instance",
+         "Value":{
+            "Fn::GetAtt":[
+               "PuppetMasterInstance",
+               "PublicIp"
+            ]
+         }
+      },
+      "PuppetClientIP":{
+         "Description":"Public IP of the Puppet client instance",
+         "Value":{
+            "Fn::GetAtt":[
+               "PuppetClientInstance",
+               "PublicIp"
+            ]
+         }
+      },
+      "PuppetMasterPrivateDNS":{
+         "Description":"Private DNS of the Puppet master instance",
+         "Value":{
+            "Fn::GetAtt":[
+               "PuppetMasterInstance",
+               "PrivateDnsName"
+            ]
+         }
+      },
+      "PuppetClientPrivateDNS":{
+         "Description":"Private DNS of the Puppet client instance",
+         "Value":{
+            "Fn::GetAtt":[
+               "PuppetMasterInstance",
+               "PrivateDnsName"
+            ]
+         }
+      }
+   }
+}

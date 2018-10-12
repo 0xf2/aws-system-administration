@@ -1,0 +1,12 @@
+from fabric.api import *
+from fabric_aws import *
+
+@ec2('us-east-1', instance_ids=['i-02f7acf3eafb0b4af','i-06eab5b7e64f5af4c','i-06eab5b7e64f5af4c'])
+@task
+def uptime_instance_ids():
+    run('uptime')
+
+@ec2('us-east-1', filters={'instance_type':'t2.micro'})
+@task
+def hostname_instance_type():
+    run('hostname')
