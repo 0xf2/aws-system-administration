@@ -3,7 +3,7 @@
    "Description":"Mezzanine-powered blog with RDS, served with Nginx.",
    "Parameters":{
       "KeyName":{
-         "Description":"Name of an existing EC2 KeyPair to enable SSH access to the instance",
+         "Description":"Name of an existing EC2 KeyPair to enable SSH access",
          "Type":"String"
       },
       "WebAMI":{
