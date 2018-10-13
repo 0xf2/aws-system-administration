@@ -96,6 +96,7 @@
                   }
                }
             ]
+}
          },
          "CeleryQueue":{
             "Type":"AWS::SQS::Queue"
@@ -243,7 +244,7 @@
                   }
                ],
                "KeyName":{
-                  "Ref":"KeyPair",
+                  "Ref":"KeyPair" },
                   "ImageId":{
                      "Ref":"WebAMI"
                   },
@@ -309,5 +310,3 @@
             }
          }
       }
-   }
-}
